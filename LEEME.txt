@@ -1,0 +1,9 @@
+CALENDARIO 2026-2099 (app instalable)
+
+1. Descomprime el ZIP.
+2. Sube TODOS los archivos a un hosting con HTTPS (por ejemplo Netlify Drop, Cloudflare Pages o GitHub Pages).
+3. Abre la dirección web en el móvil:
+   - Android (Chrome): menú ⋮ > "Instalar app".
+   - iPhone (Safari): botón Compartir > "Añadir a pantalla de inicio".
+
+Nota: abrir index.html directamente desde el móvil no permite instalarla; hace falta que esté alojada en una web con HTTPS.

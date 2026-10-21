@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0f766e">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Calendario">
+<title>Calendario 2026–2099</title>
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--fg:#16202e;--mut:#66717f;--line:#dde2e8;--acc:#0f766e;--accfg:#fff;--hol:#c0262d;--holbg:#fbe9ea;--wkbg:#eef1f4;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10161e;--card:#18212c;--fg:#e8edf3;--mut:#93a0ae;--line:#2a3643;--acc:#2dd4bf;--accfg:#06201c;--hol:#ff8a8f;--holbg:#3a2226;--wkbg:#1d2833;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#10161e;--card:#18212c;--fg:#e8edf3;--mut:#93a0ae;--line:#2a3643;--acc:#2dd4bf;--accfg:#06201c;--hol:#ff8a8f;--holbg:#3a2226;--wkbg:#1d2833;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.app{max-width:520px;margin:0 auto;padding:16px 14px 28px}
+h1{font:400 30px/1.1 Georgia,"Times New Roman",serif;margin:4px 0 14px;text-transform:capitalize}
+h1 small{font:500 16px system-ui,sans-serif;color:var(--mut);margin-left:6px}
+.bar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+button,select{font:inherit;color:var(--fg);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-height:40px}
+button{cursor:pointer}
+button:disabled{opacity:.35;cursor:default}
+button:focus-visible,select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.nav{width:44px;padding:0;font-size:20px}
+.sp{flex:1}
+.seg{display:flex}
+.seg button{border-radius:0}
+.seg button:first-child{border-radius:10px 0 0 10px}
+.seg button:last-child{border-radius:0 10px 10px 0;border-left:0}
+.seg button.on{background:var(--acc);color:var(--accfg);border-color:var(--acc)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px}
+.g{display:grid;grid-template-columns:30px repeat(7,1fr);gap:3px;text-align:center}
+.g.mini{grid-template-columns:repeat(7,1fr);gap:1px;font-size:11px}
+.dn{font-size:12px;color:var(--mut);padding:4px 0;font-weight:600}
+.wk{font-size:11px;color:var(--mut);background:var(--wkbg);border-radius:6px;display:flex;align-items:center;justify-content:center}
+.d{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;border-radius:10px;font-variant-numeric:tabular-nums}
+.mini .d{aspect-ratio:auto;height:19px;border-radius:5px}
+.d.dom{color:var(--hol)}
+.d.fest{background:var(--holbg);color:var(--hol);font-weight:700}
+.d.hoy{background:var(--acc);color:var(--accfg);font-weight:700}
+.year{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.year .card{padding:8px;cursor:pointer;text-align:center}
+.year h3{margin:0 0 4px;font:400 16px Georgia,serif;text-transform:capitalize}
+.fl{margin:14px 2px 0;padding:0;list-style:none}
+.fl li{display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.fl b{min-width:70px;color:var(--hol);font-weight:600}
+.nota{color:var(--mut);font-size:12px;margin-top:14px}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1 id="tit"></h1>
+  <div class="bar">
+    <button class="nav" id="prev" aria-label="Anterior">‹</button>
+    <button class="nav" id="next" aria-label="Siguiente">›</button>
+    <select id="selM" aria-label="Mes"></select>
+    <select id="selY" aria-label="Año"></select>
+  </div>
+  <div class="bar">
+    <div class="seg"><button id="bMes" class="on">Mes</button><button id="bAnio">Año</button></div>
+    <span class="sp"></span>
+    <button id="hoy">Hoy</button>
+  </div>
+  <div id="view"></div>
+  <ul class="fl" id="fl"></ul>
+  <p class="nota">Semanas de lunes a domingo con numeración ISO. Se marcan los festivos nacionales de España; cada comunidad añade los suyos.</p>
+</div>
+<script>
+var MES=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+var DS=["L","M","X","J","V","S","D"],MIN=2026,MAX=2099;
+var t=new Date(),TY=t.getFullYear(),TM=t.getMonth(),TD=t.getDate();
+var inR=TY>=MIN&&TY<=MAX,y=inR?TY:MIN,m=inR?TM:0,mode="mes",cache={};
+function $(i){return document.getElementById(i)}
+function easter(Y){var a=Y%19,b=Math.floor(Y/100),c=Y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,mm=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*mm+114)/31),da=((h+l-7*mm+114)%31)+1;return new Date(Y,mo-1,da)}
+function hol(Y){if(cache[Y])return cache[Y];
+  var H={"0-1":"Año Nuevo","0-6":"Epifanía del Señor","4-1":"Fiesta del Trabajo","7-15":"Asunción de la Virgen","9-12":"Fiesta Nacional de España","10-1":"Todos los Santos","11-6":"Día de la Constitución","11-8":"Inmaculada Concepción","11-25":"Navidad"};
+  var e=easter(Y);e.setDate(e.getDate()-2);H[e.getMonth()+"-"+e.getDate()]="Viernes Santo";
+  return cache[Y]=H}
+function isoWeek(d){var x=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())),n=x.getUTCDay()||7;x.setUTCDate(x.getUTCDate()+4-n);var s=new Date(Date.UTC(x.getUTCFullYear(),0,1));return Math.ceil(((x-s)/864e5+1)/7)}
+function grid(Y,M,mini){
+  var off=(new Date(Y,M,1).getDay()+6)%7,n=new Date(Y,M+1,0).getDate(),H=hol(Y),tot=Math.ceil((off+n)/7)*7;
+  var h='<div class="g'+(mini?' mini':'')+'">';
+  if(!mini)h+='<div class="dn"></div>';
+  for(var k=0;k<7;k++)h+='<div class="dn">'+DS[k]+'</div>';
+  for(var i=0;i<tot;i++){
+    if(!mini&&i%7==0)h+='<div class="wk">'+isoWeek(new Date(Y,M,Math.max(1,i-off+1)))+'</div>';
+    var d=i-off+1;
+    if(d<1||d>n){h+='<div class="d"></div>';continue}
+    var c="d";if(i%7==6)c+=" dom";if(H[M+"-"+d])c+=" fest";if(Y==TY&&M==TM&&d==TD)c+=" hoy";
+    h+='<div class="'+c+'">'+d+'</div>'}
+  return h+'</div>'}
+function render(){
+  $("selM").value=m;$("selY").value=y;
+  $("bMes").className=mode=="mes"?"on":"";$("bAnio").className=mode=="anio"?"on":"";
+  $("selM").style.display=mode=="mes"?"":"none";
+  var v="",f="";
+  if(mode=="mes"){
+    $("tit").innerHTML=MES[m]+'<small>'+y+'</small>';
+    v='<div class="card">'+grid(y,m,false)+'</div>';
+    var H=hol(y),L=[];
+    for(var k in H){var p=k.split("-");if(+p[0]==m)L.push([+p[1],H[k]])}
+    L.sort(function(a,b){return a[0]-b[0]});
+    L.forEach(function(r){var w=new Date(y,m,r[0]).getDay();f+='<li><b>'+r[0]+' de '+MES[m]+'</b><span>'+r[1]+'</span></li>'});
+  }else{
+    $("tit").textContent=y;
+    v='<div class="year">';
+    for(var i=0;i<12;i++)v+='<div class="card" data-m="'+i+'"><h3>'+MES[i]+'</h3>'+grid(y,i,true)+'</div>';
+    v+='</div>'}
+  $("view").innerHTML=v;$("fl").innerHTML=f;
+  var a=mode=="mes"?(y*12+m):y,lo=mode=="mes"?MIN*12:MIN,hi=mode=="mes"?MAX*12+11:MAX;
+  $("prev").disabled=a<=lo;$("next").disabled=a>=hi;
+  document.title="Calendario "+(mode=="mes"?MES[m]+" ":"")+y}
+function go(dx){
+  if(mode=="mes"){m+=dx;if(m<0){m=11;y--}if(m>11){m=0;y++}}else y+=dx;
+  if(y<MIN){y=MIN;m=0}if(y>MAX){y=MAX;m=11}
+  render()}
+MES.forEach(function(n,i){var o=document.createElement("option");o.value=i;o.textContent=n.charAt(0).toUpperCase()+n.slice(1);$("selM").appendChild(o)});
+for(var Y=MIN;Y<=MAX;Y++){var o=document.createElement("option");o.value=Y;o.textContent=Y;$("selY").appendChild(o)}
+$("prev").onclick=function(){go(-1)};$("next").onclick=function(){go(1)};
+$("selM").onchange=function(){m=+this.value;render()};
+$("selY").onchange=function(){y=+this.value;render()};
+$("bMes").onclick=function(){mode="mes";render()};$("bAnio").onclick=function(){mode="anio";render()};
+$("hoy").onclick=function(){if(inR){y=TY;m=TM}else{y=MIN;m=0}render()};
+$("view").onclick=function(e){var c=e.target.closest("[data-m]");if(c){m=+c.getAttribute("data-m");mode="mes";render()}};
+document.onkeydown=function(e){if(e.target.tagName=="SELECT")return;if(e.key=="ArrowLeft")go(-1);if(e.key=="ArrowRight")go(1)};
+render();
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js')})}</script>
+</body>
+</html>
